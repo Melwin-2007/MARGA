@@ -6,7 +6,7 @@ from typing import Dict, Any
 import lightgbm as lgb
 import numpy as np
 import pandas as pd
-from sentence_transformers import SentenceTransformer
+from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.preprocessing import OneHotEncoder
 
@@ -51,8 +51,8 @@ class MysoreCostEstimator:
         self.train_embeddings = None
         self.train_descriptions = None
         
-        print("Initializing SentenceTransformer model (all-MiniLM-L6-v2)...")
-        self.embedder = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
+        print("Initializing TfidfVectorizer (Max 384 features to match previous architecture)...")
+        self.embedder = TfidfVectorizer(max_features=384, stop_words='english')
         
     def train(self):
         """Train the hybrid semantic-dense pipeline on the historical Mysore dataset."""
@@ -72,8 +72,8 @@ class MysoreCostEstimator:
         df['action_type'] = df['work_desc'].apply(extract_action_type)
         
         # Step A.4: Dense Embeddings
-        print("Generating dense 384-dimensional text embeddings...")
-        embeddings = self.embedder.encode(self.train_descriptions, show_progress_bar=True)
+        print("Generating dense 384-dimensional TF-IDF embeddings...")
+        embeddings = self.embedder.fit_transform(self.train_descriptions).toarray()
         self.train_embeddings = embeddings
         
         # Step B.1: Concatenate Embeddings with One-Hot Encoded Features
@@ -93,6 +93,7 @@ class MysoreCostEstimator:
         print("Saving LightGBM model and feature columns...")
         self.model.booster_.save_model('mysore_lgb_model.txt')
         import joblib
+        joblib.dump(self.embedder, 'mysore_tfidf_vectorizer.pkl')
         joblib.dump(list(self.onehot_encoder.get_feature_names_out(['asset_type', 'action_type'])), 'mysore_feature_columns.pkl')
         
     def predict_work_cost(self, new_desc: str) -> Dict[str, Any]:
@@ -104,8 +105,8 @@ class MysoreCostEstimator:
         asset_type = extract_asset_type(new_desc)
         action_type = extract_action_type(new_desc)
         
-        # 2. Dense Embedding for Query
-        query_embedding = self.embedder.encode([new_desc])
+        # 2. TF-IDF Embedding for Query
+        query_embedding = self.embedder.transform([new_desc]).toarray()
         
         # Step C: OOD Safeguard - Calculate Cosine Similarity
         similarities = cosine_similarity(query_embedding, self.train_embeddings)[0]

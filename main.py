@@ -16,7 +16,6 @@ from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 from typing import Optional, Dict, Any
 from contextlib import asynccontextmanager
-from sentence_transformers import SentenceTransformer
 
 # Local ML & NLP modules previously built
 from nlp_compliance import MPLADSComplianceEngine
@@ -172,9 +171,9 @@ async def evaluate_project(request: ProjectEvaluationRequest):
         asset_type = extract_asset_type(desc)
         action_type = extract_action_type(desc)
         
-        # Generate semantic embedding (1D array of 384 dims)
+        # Generate TF-IDF embedding (1D array of 384 dims)
         embedder = ml_models['embedder']
-        query_embedding = embedder.encode([desc])[0] 
+        query_embedding = embedder.transform([desc]).toarray()[0]
         
         # Build one-hot array based on cached feature column order
         feature_columns = ml_models['feature_columns']
@@ -271,7 +270,7 @@ async def audit_project(request: AuditRequest):
         action_type = extract_action_type(desc)
         
         embedder = ml_models['embedder']
-        query_embedding = embedder.encode([desc])[0] 
+        query_embedding = embedder.transform([desc]).toarray()[0]
         
         feature_columns = ml_models['feature_columns']
         cat_array = np.zeros(len(feature_columns))

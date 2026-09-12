@@ -1,11 +1,6 @@
 import json
 import re
-import warnings
-from typing import Dict, Any
-
 import numpy as np
-from sentence_transformers import SentenceTransformer
-from sklearn.metrics.pairwise import cosine_similarity
 
 # Suppress minor warnings for clean terminal output
 warnings.filterwarnings('ignore')
@@ -24,13 +19,16 @@ CLAUSES = {
 
 class MPLADSComplianceEngine:
     def __init__(self):
-        print("Initializing Semantic Text Similarity model (all-MiniLM-L6-v2)...")
-        self.embedder = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
+        print("Loading pre-trained TfidfVectorizer...")
+        import joblib
+        import os
+        tfidf_path = os.path.join(os.path.dirname(__file__), 'mysore_tfidf_vectorizer.pkl')
+        self.embedder = joblib.load(tfidf_path)
         
         # Pre-compute canonical clause embeddings (Only using core 7 clauses for semantic matching)
         self.clause_keys = list(CLAUSES.keys())[:7]
         self.clause_texts = list(CLAUSES.values())[:7]
-        self.clause_embeddings = self.embedder.encode(self.clause_texts)
+        self.clause_embeddings = self.embedder.transform(self.clause_texts).toarray()
         
     def _layer_1_regex(self, desc_lower: str) -> str | None:
         """Layer 1: Deterministic Regex Filter (Fast & Exact)."""
@@ -62,7 +60,7 @@ class MPLADSComplianceEngine:
 
     def _layer_2_semantic(self, desc: str) -> tuple[str | None, float]:
         """Layer 2: Semantic Text Similarity (Catching Evasions)."""
-        query_embedding = self.embedder.encode([desc])
+        query_embedding = self.embedder.transform([desc]).toarray()
         similarities = cosine_similarity(query_embedding, self.clause_embeddings)[0]
         
         max_sim_idx = np.argmax(similarities)
