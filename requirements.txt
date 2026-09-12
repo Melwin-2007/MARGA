@@ -5,7 +5,6 @@ pydantic>=2.0.0
 sentence-transformers
 lightgbm
 scikit-learn
-shap
 spacy
 fastapi
 uvicorn

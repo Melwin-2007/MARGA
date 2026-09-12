@@ -1,9 +1,15 @@
+import os
+# Drastically reduce memory overhead for Render's 512MB free tier
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
+os.environ["NUMEXPR_NUM_THREADS"] = "1"
+
 import joblib
 import numpy as np
-import shap
 import lightgbm as lgb
 import pandas as pd
-import os
 from fastapi import FastAPI
 from sklearn.neighbors import BallTree
 from fastapi.responses import HTMLResponse
@@ -30,9 +36,6 @@ async def lifespan(app: FastAPI):
     # (Assuming it was saved via `model.booster_.save_model('mysore_lgb_model.txt')`)
     model_path = os.path.join(os.path.dirname(__file__), 'mysore_lgb_model.txt')
     ml_models['lgb_model'] = lgb.Booster(model_file=model_path)
-    
-    print("Initializing SHAP TreeExplainer...")
-    ml_models['explainer'] = shap.TreeExplainer(ml_models['lgb_model'])
     
     print("Loading feature columns mapping from mysore_feature_columns.pkl...")
     # Assuming this is a list of exact categorical column names, e.g., ['asset_type_ROAD_DRAINAGE', ...]
@@ -193,15 +196,12 @@ async def evaluate_project(request: ProjectEvaluationRequest):
         raw_prediction = lgb_model.predict(x_vector)[0]
         estimated_cost = quantize_tranche(raw_prediction)
         
-        # 4. TreeSHAP Explanation
-        explainer = ml_models['explainer']
-        shap_values = explainer.shap_values(x_vector)[0]
+        # 4. TreeSHAP Explanation (Natively via LightGBM to save memory)
+        shap_contribs = lgb_model.predict(x_vector, pred_contrib=True)[0]
         
-        expected_value = explainer.expected_value
-        if isinstance(expected_value, np.ndarray):
-            expected_value = float(expected_value[0])
-        else:
-            expected_value = float(expected_value)
+        # In LightGBM, the last element of pred_contrib is the expected_value
+        expected_value = float(shap_contribs[-1])
+        shap_values = shap_contribs[:-1]
             
         # Aggregate semantic embedding impacts
         num_emb_dims = len(query_embedding)
