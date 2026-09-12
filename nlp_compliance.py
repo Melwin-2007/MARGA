@@ -1,6 +1,10 @@
 import json
 import re
+import warnings
+from typing import Dict, Any
+
 import numpy as np
+from sklearn.metrics.pairwise import cosine_similarity
 
 # Suppress minor warnings for clean terminal output
 warnings.filterwarnings('ignore')
