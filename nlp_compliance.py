@@ -4,7 +4,6 @@ import warnings
 from typing import Dict, Any
 
 import numpy as np
-import spacy
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 
@@ -28,14 +27,6 @@ class MPLADSComplianceEngine:
         print("Initializing Semantic Text Similarity model (all-MiniLM-L6-v2)...")
         self.embedder = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
         
-        print("Initializing SpaCy NER model (en_core_web_sm)...")
-        try:
-            self.nlp = spacy.load("en_core_web_sm")
-        except OSError:
-            from spacy.cli import download
-            download("en_core_web_sm")
-            self.nlp = spacy.load("en_core_web_sm")
-            
         # Pre-compute canonical clause embeddings (Only using core 7 clauses for semantic matching)
         self.clause_keys = list(CLAUSES.keys())[:7]
         self.clause_texts = list(CLAUSES.values())[:7]
@@ -89,8 +80,11 @@ class MPLADSComplianceEngine:
 
     def _layer_3_ner(self, desc: str) -> str | None:
         """Layer 3: Named Entity Recognition (The Individual Naming Clause)."""
-        doc = self.nlp(desc)
-        has_person = any(ent.label_ == "PERSON" for ent in doc.ents)
+        # Lightweight NER fallback using regex to save ~150MB RAM by removing SpaCy
+        # Look for Title Cased words that might represent a person's name
+        # Exclude common words that are capitalized at the start of sentences
+        words = re.findall(r'\b[A-Z][a-z]+\b', desc[1:])
+        has_person = len(words) >= 2
         
         desc_lower = desc.lower()
         has_trigger = re.search(r'\b(memorial|arch|library|bhavana)\b', desc_lower)
