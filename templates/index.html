@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="MPLADS Intelligence Suite - AI-powered platform for Annexure II project evaluation and cost inflation audits.">
+    <title>MPLADS Intelligence Suite | Premium AI Audit</title>
+    
+    <!-- Leaflet CSS & JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-color: #030014;
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --accent: #6366f1;
+            --accent-hover: #4f46e5;
+            --accent-glow: rgba(99, 102, 241, 0.5);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --danger: #ff4b4b;
+            --danger-bg: rgba(255, 75, 75, 0.1);
+            --danger-border: rgba(255, 75, 75, 0.3);
+            --success: #10b981;
+            --success-bg: rgba(16, 185, 129, 0.1);
+            --success-border: rgba(16, 185, 129, 0.3);
+            --warning: #f59e0b;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 3rem 1.5rem;
+            line-height: 1.6;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Dynamic Background Orbs */
+        .bg-orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(100px);
+            z-index: -1;
+            animation: float 20s infinite ease-in-out alternate;
+        }
+        .orb-1 {
+            width: 400px; height: 400px;
+            background: rgba(99, 102, 241, 0.15);
+            top: -100px; left: -100px;
+        }
+        .orb-2 {
+            width: 500px; height: 500px;
+            background: rgba(139, 92, 246, 0.12);
+            bottom: -150px; right: -100px;
+            animation-delay: -5s;
+        }
+        .orb-3 {
+            width: 300px; height: 300px;
+            background: rgba(236, 72, 153, 0.1);
+            top: 40%; left: 50%;
+            transform: translate(-50%, -50%);
+            animation-delay: -10s;
+        }
+
+        @keyframes float {
+            0% { transform: translate(0, 0) scale(1); }
+            100% { transform: translate(30px, 50px) scale(1.1); }
+        }
+
+        h1, h2, h3, .tab-btn {
+            font-family: 'Outfit', sans-serif;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            display: flex;
+            flex-direction: column;
+            gap: 2.5rem;
+            z-index: 1;
+        }
+        
+        .nav-tabs {
+            display: flex;
+            gap: 0.5rem;
+            background: rgba(255, 255, 255, 0.02);
+            padding: 0.5rem;
+            border-radius: 24px;
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            width: fit-content;
+            margin: 0 auto;
+            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+            animation: slideDown 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+        
+        .tab-btn {
+            padding: 1rem 2rem;
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-weight: 500;
+            font-size: 1.05rem;
+            border-radius: 18px;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .tab-btn:hover {
+            color: var(--text-main);
+            background: rgba(255, 255, 255, 0.05);
+        }
+        
+        .tab-btn.active {
+            background: var(--accent);
+            color: #fff;
+            box-shadow: 0 8px 25px var(--accent-glow);
+            font-weight: 600;
+        }
+
+        .tab-content { display: none; }
+        .tab-content.active {
+            display: block;
+            animation: fadeScaleUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        .layout-split {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2.5rem;
+            align-items: start;
+        }
+
+        @media (max-width: 950px) {
+            .layout-split { grid-template-columns: 1fr; }
+            .nav-tabs { width: 100%; flex-direction: column; }
+        }
+
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid var(--glass-border);
+            border-radius: 32px;
+            padding: 3rem;
+            box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .glass-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 100%;
+            background: linear-gradient(180deg, rgba(255,255,255,0.03) 0%, transparent 100%);
+            pointer-events: none;
+        }
+
+        .glass-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 40px 80px -15px rgba(0, 0, 0, 0.7), 0 0 40px rgba(99, 102, 241, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 2.5rem;
+            position: relative;
+        }
+
+        h1 {
+            font-size: 2.75rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #fff 0%, #a5b4fc 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.75rem;
+            letter-spacing: -0.03em;
+            line-height: 1.2;
+        }
+
+        p.subtitle {
+            color: var(--text-muted);
+            font-size: 1.15rem;
+            font-weight: 400;
+        }
+
+        .input-group {
+            position: relative;
+            margin-bottom: 1.75rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .input-group label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #cbd5e1;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-left: 0.25rem;
+        }
+
+        textarea, input, select {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 1.25rem 1.5rem;
+            color: #fff;
+            font-family: inherit;
+            font-size: 1.05rem;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        textarea { resize: vertical; min-height: 120px; }
+        
+        select option { background: #0f172a; color: white; }
+
+        textarea:focus, input:focus, select:focus {
+            outline: none;
+            border-color: var(--accent);
+            background: rgba(0, 0, 0, 0.4);
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15), inset 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        textarea::placeholder, input::placeholder { color: #64748b; }
+
+        button.action-btn {
+            width: 100%;
+            padding: 1.25rem;
+            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%);
+            color: #fff;
+            border: none;
+            border-radius: 16px;
+            font-size: 1.15rem;
+            font-family: 'Outfit', sans-serif;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+            overflow: hidden;
+            margin-top: 1rem;
+            box-shadow: 0 10px 20px -5px var(--accent-glow);
+        }
+
+        button.action-btn::after {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%; width: 50%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: 0.5s;
+        }
+
+        button.action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 25px -5px rgba(99, 102, 241, 0.6);
+        }
+        
+        button.action-btn:hover::after { left: 150%; }
+        
+        button.action-btn:active { transform: translateY(1px); }
+
+        .loading-overlay {
+            position: absolute;
+            inset: 0;
+            background: var(--accent-hover);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        button.loading .loading-overlay { opacity: 1; }
+
+        .spinner {
+            width: 26px; height: 26px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 0.8s linear infinite;
+        }
+
+        .result-card {
+            display: none;
+            background: linear-gradient(145deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.01) 100%);
+        }
+
+        .result-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .result-header h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .status-badge {
+            padding: 0.6rem 1.5rem;
+            border-radius: 9999px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            font-family: 'Outfit', sans-serif;
+        }
+
+        .status-flagged {
+            background: var(--danger-bg);
+            color: var(--danger);
+            border: 1px solid var(--danger-border);
+            text-shadow: 0 0 10px rgba(255, 75, 75, 0.3);
+            box-shadow: 0 0 20px rgba(255, 75, 75, 0.15);
+        }
+
+        .status-cleared {
+            background: var(--success-bg);
+            color: var(--success);
+            border: 1px solid var(--success-border);
+            text-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.15);
+        }
+
+        .result-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .detail-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+            padding: 1rem;
+            background: rgba(0,0,0,0.2);
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.03);
+            transition: transform 0.3s ease;
+        }
+        
+        .detail-item:hover { transform: translateY(-2px); background: rgba(0,0,0,0.25); }
+
+        .detail-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            font-weight: 600;
+        }
+
+        .detail-value {
+            font-weight: 700;
+            font-size: 1.25rem;
+            font-family: 'Outfit', sans-serif;
+            color: #fff;
+        }
+        
+        .val-danger { color: var(--danger); }
+        .val-success { color: var(--success); }
+        .val-warning { color: var(--warning); }
+
+        .explanation {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 1.75rem;
+            border-radius: 16px;
+            border-left: 4px solid var(--accent);
+            margin-top: 1.5rem;
+            position: relative;
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.2);
+        }
+
+        .explanation p {
+            margin-top: 0.75rem;
+            color: #e2e8f0;
+            font-size: 1.05rem;
+            line-height: 1.7;
+        }
+
+        #itineraryMap {
+            width: 100%;
+            height: 550px;
+            border-radius: 20px;
+            border: 1px solid var(--glass-border);
+            z-index: 1;
+            box-shadow: 0 20px 40px -10px rgba(0,0,0,0.4);
+        }
+
+        .map-tiles {
+            filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+        }
+
+        /* Map UI overrides for dark theme */
+        .leaflet-container {
+            background: #0f172a;
+            font-family: 'Inter', sans-serif;
+        }
+        .leaflet-popup-content-wrapper, .leaflet-popup-tip {
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(10px);
+            color: #f8fafc;
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.5);
+            border-radius: 12px;
+        }
+        .leaflet-popup-content { margin: 15px; }
+        .leaflet-popup-content strong { color: #818cf8; font-family: 'Outfit'; font-size: 1.1rem; }
+        .leaflet-popup-content b { color: #94a3b8; }
+        .leaflet-popup-content hr { border-color: rgba(255,255,255,0.1); margin: 10px 0; }
+
+        /* Animations */
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeScaleUp {
+            from { opacity: 0; transform: scale(0.97) translateY(10px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Background Animated Orbs -->
+    <div class="bg-orb orb-1"></div>
+    <div class="bg-orb orb-2"></div>
+    <div class="bg-orb orb-3"></div>
+
+    <main class="container">
+        
+        <nav class="nav-tabs" aria-label="Main Navigation">
+            <button class="tab-btn active" onclick="switchTab('complianceTab')">Compliance Evaluator</button>
+            <button class="tab-btn" onclick="switchTab('auditTab')">DA Audit Tool</button>
+            <button class="tab-btn" onclick="switchTab('mapTab')">Inspection Map</button>
+        </nav>
+
+        <!-- COMPLIANCE EVALUATOR TAB -->
+        <section id="complianceTab" class="tab-content active">
+            <div class="layout-split">
+                <div class="glass-card">
+                    <header>
+                        <h1>MPLADS Compliance</h1>
+                        <p class="subtitle">AI-Powered Annexure II Project Evaluator</p>
+                    </header>
+
+                    <div class="input-group">
+                        <label for="description">Project Description</label>
+                        <textarea id="description" placeholder="E.g., Construction of community hall at Mysore..."></textarea>
+                    </div>
+
+                    <button id="evaluateBtn" class="action-btn" onclick="evaluateDescription()">
+                        <span>Evaluate Project</span>
+                        <div class="loading-overlay"><div class="spinner"></div></div>
+                    </button>
+                </div>
+
+                <div id="complianceResult" class="glass-card result-card">
+                    <div class="result-header">
+                        <h2>Evaluation Result</h2>
+                        <div id="statusBadge" class="status-badge"></div>
+                    </div>
+
+                    <div class="result-grid">
+                        <div class="detail-item">
+                            <span class="detail-label">Compliance Status</span>
+                            <span id="complianceVal" class="detail-value">-</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Estimated Cost</span>
+                            <span id="costVal" class="detail-value" style="color: #818cf8;">-</span>
+                        </div>
+                    </div>
+
+                    <div id="clauseSection" class="detail-item" style="margin-bottom: 1.5rem; display: none; background: rgba(255, 75, 75, 0.05); border-color: rgba(255, 75, 75, 0.2);">
+                        <span class="detail-label" style="color: #ff4b4b;">Violated Clause</span>
+                        <span id="clauseVal" class="detail-value val-danger"></span>
+                    </div>
+
+                    <div id="explanationSection" class="explanation" style="display: none;">
+                        <span class="detail-label">Explanation for MP</span>
+                        <p id="explanationVal"></p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- DA AUDIT TOOL TAB -->
+        <section id="auditTab" class="tab-content">
+            <div class="layout-split">
+                <div class="glass-card">
+                    <header>
+                        <h1>DA Inflation Audit</h1>
+                        <p class="subtitle">Detect Systemic Cost Inflation Anomalies</p>
+                    </header>
+
+                    <div class="input-group">
+                        <label for="idaDropdown">Implementing Agency (IDA)</label>
+                        <select id="idaDropdown">
+                            <option value="">Loading agencies...</option>
+                        </select>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="auditDescription">Work Description</label>
+                        <textarea id="auditDescription" placeholder="Enter project description..." rows="3"></textarea>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="sanctionedAmount">Sanctioned Amount (₹)</label>
+                        <input type="number" id="sanctionedAmount" placeholder="e.g. 1500000" />
+                    </div>
+
+                    <button id="auditBtn" class="action-btn" onclick="runAudit()">
+                        <span>Run Inflation Audit</span>
+                        <div class="loading-overlay"><div class="spinner"></div></div>
+                    </button>
+                </div>
+
+                <div id="auditResult" class="glass-card result-card">
+                    <div class="result-header">
+                        <h2>Audit Findings</h2>
+                        <div id="auditStatusBadge" class="status-badge"></div>
+                    </div>
+
+                    <div class="result-grid">
+                        <div class="detail-item">
+                            <span class="detail-label">Sanctioned vs Estimated</span>
+                            <span class="detail-value">
+                                <span id="auditSanctionedVal" style="color: #cbd5e1;"></span> <span style="color: #64748b; font-size: 0.9em; font-weight: normal;">vs</span> <span id="auditEstimatedVal" style="color: #818cf8;"></span>
+                            </span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Cost Deviation</span>
+                            <span id="auditDevVal" class="detail-value">-</span>
+                        </div>
+                    </div>
+
+                    <div class="result-grid" style="grid-template-columns: 1fr;">
+                        <div class="detail-item" style="background: rgba(255,255,255,0.02);">
+                            <span class="detail-label">Project Level Verdict</span>
+                            <span id="auditVerdictVal" class="detail-value">-</span>
+                        </div>
+                    </div>
+                    
+                    <div class="explanation">
+                        <div class="result-grid" style="margin-bottom: 0;">
+                            <div class="detail-item" style="background: transparent; border: none; padding: 0;">
+                                <span class="detail-label">Agency Hist. Z-Score</span>
+                                <span id="agencyZScore" class="detail-value">-</span>
+                            </div>
+                            <div class="detail-item" style="background: transparent; border: none; padding: 0;">
+                                <span class="detail-label">Agency Hist. Median Dev</span>
+                                <span id="agencyMedianDev" class="detail-value" style="color: #f8fafc;">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- INSPECTION MAP TAB -->
+        <section id="mapTab" class="tab-content">
+            <div class="glass-card" style="padding: 2.5rem;">
+                <header style="margin-bottom: 2rem;">
+                    <h1>Inspection Itinerary</h1>
+                    <p class="subtitle">Mysore District - AI Spatially Clustered Field Audits</p>
+                </header>
+                
+                <div id="itineraryMap"></div>
+                
+                <div class="result-grid" style="margin-top: 2rem; margin-bottom: 0;">
+                    <div class="detail-item" style="border-color: rgba(239, 68, 68, 0.3); background: rgba(239, 68, 68, 0.05);">
+                        <span class="detail-label" style="color: #fca5a5;">🔴 Anchors</span>
+                        <span class="detail-value" style="font-size: 1rem; color: #f8fafc;">High-Risk Projects</span>
+                    </div>
+                    <div class="detail-item" style="border-color: rgba(16, 185, 129, 0.3); background: rgba(16, 185, 129, 0.05);">
+                        <span class="detail-label" style="color: #6ee7b7;">🟢 Surprises</span>
+                        <span class="detail-value" style="font-size: 1rem; color: #f8fafc;">10km Radius Checks</span>
+                    </div>
+                    <div class="detail-item" style="border-color: rgba(245, 158, 11, 0.3); background: rgba(245, 158, 11, 0.05);">
+                        <span class="detail-label" style="color: #fcd34d;">🟡 Quota</span>
+                        <span class="detail-value" style="font-size: 1rem; color: #f8fafc;">Random Fillers</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+    </main>
+
+    <script>
+        let mapInitialized = false;
+        let inspectionMap = null;
+
+        // Tab Switching Logic
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+            
+            if(tabId === 'auditTab' && document.getElementById('idaDropdown').options.length <= 1) {
+                fetchAgencies();
+            }
+            
+            if(tabId === 'mapTab') {
+                setTimeout(() => {
+                    if (inspectionMap) inspectionMap.invalidateSize();
+                    loadMapData();
+                }, 100);
+            }
+        }
+
+        async function loadMapData() {
+            if (mapInitialized) return;
+            
+            try {
+                // Initialize map centered roughly on Mysuru
+                if (!inspectionMap) {
+                    // Dark theme map tiles using standard OSM with CSS inversion
+                    inspectionMap = L.map('itineraryMap').setView([12.30, 76.65], 11);
+                    
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        maxZoom: 19,
+                        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                        className: 'map-tiles'
+                    }).addTo(inspectionMap);
+                }
+                
+                const response = await fetch('/api/v1/projects/map');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                
+                // Add markers
+                data.markers.forEach(marker => {
+                    let color = '#3b82f6'; // default blue
+                    let fillColor = '#3b82f6';
+                    
+                    if (marker.role.includes('ANCHOR')) { color = '#ef4444'; fillColor = '#ef4444'; }
+                    else if (marker.role.includes('SURPRISE')) { color = '#10b981'; fillColor = '#10b981'; }
+                    else if (marker.role.includes('RANDOM')) { color = '#f59e0b'; fillColor = '#f59e0b'; }
+                    
+                    const circle = L.circleMarker([marker.latitude, marker.longitude], {
+                        color: color,
+                        weight: 2,
+                        fillColor: fillColor,
+                        fillOpacity: 0.8,
+                        radius: 9
+                    }).addTo(inspectionMap);
+                    
+                    const costStr = marker.cost ? '₹' + marker.cost.toLocaleString('en-IN') : 'N/A';
+                    
+                    circle.bindPopup(`
+                        <strong>${marker.role}</strong><br>
+                        <b>ID:</b> <span>${marker.work_id}</span><br>
+                        <b>Cost:</b> <span>${costStr}</span><br>
+                        <hr>
+                        <span style="font-size: 0.9rem; color: #e2e8f0;">${marker.description}</span>
+                    `);
+                });
+                
+                mapInitialized = true;
+            } catch (error) {
+                console.error("Failed to load map data:", error);
+                document.getElementById('itineraryMap').innerHTML = `<div style="padding: 3rem; text-align: center; color: #f8fafc; font-weight: 500; background: rgba(255,255,255,0.05); border-radius: 16px; display: flex; align-items: center; justify-content: center; height: 100%;"><div><span style="color:#ef4444; font-size: 2rem; display:block; margin-bottom: 1rem;">⚠️</span>Error loading map data:<br><span style="color:#94a3b8; font-size:0.9rem;">${error.message}</span><br><br>Please ensure backend is running.</div></div>`;
+            }
+        }
+
+        // Fetch Agencies on load for DA Audit Tool
+        async function fetchAgencies() {
+            try {
+                const response = await fetch('/api/v1/agencies');
+                const data = await response.json();
+                const dropdown = document.getElementById('idaDropdown');
+                dropdown.innerHTML = '';
+                
+                data.agencies.forEach(agency => {
+                    const option = document.createElement('option');
+                    option.value = agency;
+                    option.textContent = agency;
+                    dropdown.appendChild(option);
+                });
+            } catch (e) {
+                console.error("Failed to fetch agencies:", e);
+                document.getElementById('idaDropdown').innerHTML = '<option value="">Error loading agencies</option>';
+            }
+        }
+
+        // Evaluate Compliance
+        async function evaluateDescription() {
+            const descInput = document.getElementById('description').value;
+            const btn = document.getElementById('evaluateBtn');
+            const resultCard = document.getElementById('complianceResult');
+            
+            if (!descInput.trim()) return alert("Please enter a description.");
+
+            btn.classList.add('loading');
+            resultCard.style.display = 'none';
+
+            try {
+                const response = await fetch('/api/v1/projects/evaluate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ work_description: descInput, district: "MYSURU" })
+                });
+
+                const data = await response.json();
+
+                const statusBadge = document.getElementById('statusBadge');
+                statusBadge.textContent = data.compliance_status;
+                statusBadge.className = `status-badge ${data.compliance_status === 'FLAGGED' ? 'status-flagged' : 'status-cleared'}`;
+                
+                document.getElementById('complianceVal').textContent = data.compliance_status || 'N/A';
+                
+                const costVal = document.getElementById('costVal');
+                if (data.estimated_cost_inr != null) {
+                    costVal.textContent = '₹' + data.estimated_cost_inr.toLocaleString('en-IN');
+                } else {
+                    costVal.textContent = 'N/A';
+                }
+                
+                if (data.violation_clause) {
+                    document.getElementById('clauseSection').style.display = 'flex';
+                    document.getElementById('clauseVal').textContent = data.violation_clause;
+                } else {
+                    document.getElementById('clauseSection').style.display = 'none';
+                }
+
+                if (data.explanation) {
+                    document.getElementById('explanationSection').style.display = 'block';
+                    document.getElementById('explanationVal').textContent = data.explanation;
+                } else {
+                    document.getElementById('explanationSection').style.display = 'none';
+                }
+
+                resultCard.style.display = 'block';
+            } catch (error) {
+                alert("An error occurred. Check backend logs.");
+            } finally {
+                btn.classList.remove('loading');
+            }
+        }
+
+        // Run DA Audit
+        async function runAudit() {
+            const desc = document.getElementById('auditDescription').value;
+            const amount = document.getElementById('sanctionedAmount').value;
+            const ida = document.getElementById('idaDropdown').value;
+            
+            if (!desc || !amount || !ida) return alert("Please fill in all fields.");
+
+            const btn = document.getElementById('auditBtn');
+            const resultCard = document.getElementById('auditResult');
+            
+            btn.classList.add('loading');
+            resultCard.style.display = 'none';
+
+            try {
+                const response = await fetch('/api/v1/projects/audit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        work_description: desc,
+                        sanctioned_amount: parseFloat(amount),
+                        ida: ida
+                    })
+                });
+
+                const data = await response.json();
+                if(data.status === "ERROR") {
+                    alert("Error: " + data.error);
+                    return;
+                }
+
+                // Render Results
+                const statusBadge = document.getElementById('auditStatusBadge');
+                statusBadge.textContent = data.flagged ? 'SYSTEMIC INFLATION FLAGGED' : 'AGENCY CLEARED';
+                statusBadge.className = `status-badge ${data.flagged ? 'status-flagged' : 'status-cleared'}`;
+
+                document.getElementById('auditSanctionedVal').textContent = '₹' + parseFloat(amount).toLocaleString('en-IN');
+                document.getElementById('auditEstimatedVal').textContent = '₹' + (data.estimated_cost_inr || 0).toLocaleString('en-IN');
+
+                const devPct = (data.deviation_pct * 100).toFixed(2);
+                const devElem = document.getElementById('auditDevVal');
+                devElem.textContent = `${devPct > 0 ? '+' : ''}${devPct}%`;
+                devElem.className = 'detail-value ' + (data.deviation_pct > 0.2 ? 'val-danger' : (data.deviation_pct < -0.1 ? 'val-success' : 'val-warning'));
+
+                const verdictElem = document.getElementById('auditVerdictVal');
+                verdictElem.textContent = data.verdict;
+                if (data.deviation_pct < 0) {
+                    verdictElem.className = 'detail-value val-success';
+                } else if (data.deviation_pct <= 0.2) {
+                    verdictElem.className = 'detail-value val-warning';
+                } else {
+                    verdictElem.className = 'detail-value val-danger';
+                }
+
+                document.getElementById('agencyZScore').textContent = data.agency_mod_z_score.toFixed(2);
+                document.getElementById('agencyZScore').className = 'detail-value ' + (data.agency_mod_z_score > 2.5 ? 'val-danger' : 'val-success');
+                
+                document.getElementById('agencyMedianDev').textContent = (data.agency_median_deviation * 100).toFixed(2) + '%';
+
+                resultCard.style.display = 'block';
+
+            } catch (error) {
+                alert("An error occurred while auditing.");
+            } finally {
+                btn.classList.remove('loading');
+            }
+        }
+    </script>
+</body>
+</html>
