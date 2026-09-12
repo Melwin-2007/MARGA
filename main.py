@@ -39,11 +39,11 @@ async def lifespan(app: FastAPI):
     feature_columns_path = os.path.join(os.path.dirname(__file__), 'mysore_feature_columns.pkl')
     ml_models['feature_columns'] = joblib.load(feature_columns_path)
     
-    print("Loading Sentence Transformer (all-MiniLM-L6-v2)...")
-    ml_models['embedder'] = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
-    
     print("Loading NLP Compliance Engine...")
     ml_models['compliance_engine'] = MPLADSComplianceEngine()
+    
+    print("Reusing Compliance Engine Embedder to save RAM...")
+    ml_models['embedder'] = ml_models['compliance_engine'].embedder
     
     print("Loading historical agency stats for DA Audit Tool...")
     try:
